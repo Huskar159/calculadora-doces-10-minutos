@@ -1,19 +1,31 @@
 import { useState } from "react";
 import { Phone, ArrowRight, Heart } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import supabase from "@/lib/supabaseClient";
 
 const LoginPage = () => {
   const [whatsapp, setWhatsapp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simula um pequeno delay para experiência melhor
-    setTimeout(() => {
-      // Redireciona para a página principal
-      window.location.href = "/";
-    }, 800);
+    const digits = whatsapp.replace(/\D/g, "");
+    try {
+      try { localStorage.setItem("whatsapp", digits); } catch {}
+      // Upsert no Supabase (não sobrescreve status existente)
+      const { error } = await supabase
+        .from("clients")
+        .upsert({ whatsapp: digits }, { onConflict: "whatsapp" });
+      if (error) {
+        console.error("Erro Supabase upsert:", error.message);
+      }
+    } finally {
+      setTimeout(() => {
+        navigate("/calculadora");
+      }, 400);
+    }
   };
 
   const formatWhatsApp = (value: string) => {
