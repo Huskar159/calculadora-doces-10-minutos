@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import supabase from "@/lib/supabaseClient";
 import { Trash2, Plus, Calculator, DollarSign, TrendingUp, Save } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -172,7 +173,7 @@ export default function CalculadoraPrecificacao() {
     }, 100);
   };
 
-  const salvarReceita = () => {
+  const salvarReceita = async () => {
     if (!resultado) {
       toast.error("Primeiro calcule o preço da receita");
       return;
@@ -180,6 +181,12 @@ export default function CalculadoraPrecificacao() {
 
     const recipeName = prompt("Nome da receita:");
     if (!recipeName) return;
+
+    const whatsapp = localStorage.getItem('whatsapp');
+    if (!whatsapp) {
+      toast.error("Faça login com seu WhatsApp para salvar");
+      return;
+    }
 
     const receita = {
       id: Date.now(),
@@ -201,12 +208,20 @@ export default function CalculadoraPrecificacao() {
       createdAt: new Date().toISOString()
     };
 
-    // Salvar no localStorage
-    const savedRecipes = localStorage.getItem('savedRecipes');
-    const recipes = savedRecipes ? JSON.parse(savedRecipes) : [];
-    recipes.push(receita);
-    localStorage.setItem('savedRecipes', JSON.stringify(recipes));
-
+    // Salvar no Supabase
+    const { error } = await supabase.from('recipes').insert({
+      whatsapp,
+      name: receita.name,
+      ingredients: receita.ingredients,
+      custos_extras: receita.custosExtras,
+      lucro_desejado: receita.lucroDesejado,
+      resultado: receita.resultado,
+    });
+    if (error) {
+      console.error('Erro ao salvar receita:', error.message);
+      toast.error('Erro ao salvar receita');
+      return;
+    }
     toast.success(`Receita "${recipeName}" salva com sucesso!`);
   };
 
